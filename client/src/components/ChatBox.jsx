@@ -6,7 +6,7 @@ import { FaImage, FaTimes, FaArrowDown } from "react-icons/fa";
 
 const ChatBox = () => {
   const { receiverId } = useParams();
-  const { fetchMessages, messages, isLoading, sendMessage } =
+  const { fetchMessages, messages, isLoading, sendMessage, deleteConversation } =
     useContext(AppContext);
   const [message, setMessage] = useState("");
   const [image, setImage] = useState(null);
@@ -93,10 +93,38 @@ const ChatBox = () => {
     }
   }, [messages]);
 
+  //delete conversation
+const handleDeleteConversation = async () => {
+  if (!window.confirm("Are you sure you want to delete this conversation?")) {
+    return;
+  }
+
+  try {
+    await deleteConversation(receiverId);
+    toast.success("Conversation deleted successfully!");
+
+    // Clear messages from UI
+    fetchMessages(receiverId);
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to delete conversation. Please try again.");
+  }
+};
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-gray-700 to-gray-800">
-      <div className="p-4 bg-gray-800 border-b border-gray-600">
+      <div className="p-6 bg-gray-800 border-b flex justify-between border-gray-600">
         <h3 className="text-xl font-semibold text-gray-100">Chat</h3>
+        { messages.length > 0 && (
+        <div className="flex gap-2">
+          <button
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-teal-400 text-white font-semibold rounded-lg shadow-md hover:scale-105 transform transition-all duration-300"
+            onClick={handleDeleteConversation}
+          >
+            Delete Conversation
+          </button>
+        </div>
+        )}
       </div>
 
       {/* Chat Messages Section */}
@@ -133,7 +161,7 @@ const ChatBox = () => {
                     />
                   </div>
                 )}
-                {msg.message && <p className="text-sm mt-2">{msg.message}</p>}
+                {msg.message && <p className="text-[16px] pr-1 mt-1">{msg.message}</p>}
                 <p className="text-xs mt-1 opacity-70">
                   {new Date(msg.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -190,7 +218,7 @@ const ChatBox = () => {
 
           <input
             type="text"
-            placeholder="Type your message or send image..."
+            placeholder="Send your message or send image..."
             onChange={(e) => setMessage(e.target.value)}
             value={message}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}

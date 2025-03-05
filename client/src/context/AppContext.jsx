@@ -181,6 +181,24 @@ const AppProvider = ({ children }) => {
     }
   };
 
+  const deleteConversation = async (receiverId) => {
+    try {
+      const { data } = await axios.delete(
+        `${backendURI}/api/message/delete-conversation/${receiverId}`,
+        { withCredentials: true }
+      );
+      if (data.success) {
+        setMessages([]);
+      } else {
+        toast.error("Error deleting conversation!");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -199,6 +217,7 @@ const AppProvider = ({ children }) => {
     handleLogout,
     users,
     userData,
+    deleteConversation,
     fetchMessages,
     messages,
     setReceiverId,
