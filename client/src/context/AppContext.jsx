@@ -143,23 +143,30 @@ const AppProvider = ({ children }) => {
   };
 
   // send message
-  const sendMessage = async (receiverId, message) => {
+  const sendMessage = async (receiverId, message, image) => {
     if (!receiverId || !message) {
       return toast.error("Receiver ID and message are required!");
     }
     try {
+      const formData = new FormData();
+      formData.append("message", message); 
+      formData.append("receiverId", receiverId);
+
+      if (image) {
+        formData.append("image", image);      
+    }  
       const { data } = await axios.post(
         `${backendURI}/api/message/send/${receiverId}`,
-        { message },
+        formData,
         { withCredentials: true }
       );
       if (data.success) {
         setMessages((prevMessages) => [
           ...prevMessages,
           {
-
             receiver: receiverId,
             message,
+            image: data.image || null,
             createdAt: new Date(),
           },
         ]);
@@ -167,6 +174,7 @@ const AppProvider = ({ children }) => {
         toast.error("Error sending message!");
       }
     } catch (error) {
+      console.log(error)
       toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setIsLoading(false)
