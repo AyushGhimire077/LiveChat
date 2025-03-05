@@ -1,34 +1,59 @@
 import Message from "../models/messageModel.js";
 import socketService from "../config/socket.js";
+import cloudinary from "../config/cloudinary.js";
 
 export const sendMessage = async (req, res) => {
     const senderId = req.user._id;
     const receiverId = req.params.id;
-    const { message } = req.body;
+  const { message } = req.body;
+  const image = req.file ? req.file.path : null;
+
+    // Validate input
     if (!message) {
         return res.status(400).json({ success: false, message: "Message is required" });
     }
-    if (!receiverId ) {
+    if (!receiverId) {
         return res.status(400).json({ success: false, message: "Receiver ID is required" });
     }
     if (!senderId) {
-        return res.status(400).json({success: false, message:"SenderId is required"})
+        return res.status(400).json({ success: false, message: "Sender ID is required" });
     }
+
     try {
-        const newMessage = await new Message({
+        // Create the new message object
+        const newMessage = new Message({
             sender: senderId,
             receiver: receiverId,
             message,
-        })
-        
-        socketService.sendMessage(receiverId, { sender: senderId, message });
-        await newMessage.save();
+        });
+           if (image) {
+             try {
+               const result = await cloudinary.uploader.upload(image, {
+                 folder: "chat-app", 
+               });
+               newMessage.image = result.secure_url; 
+             } catch (error) {
+               console.error("Error uploading image:", error);
+               return res
+                 .status(500)
+                 .json({ success: false, message: "Failed to upload image" });
+             }
+           }
+
+           // Save the message in the database
+           await newMessage.save();
+
+        socketService.sendMessage(receiverId, { sender: senderId, message,  image: newMessage.image || null });
+
+        // Send a success response
         return res.status(200).json({ success: true, message: "Message sent successfully" });
+
     } catch (error) {
         console.error(error);
         return res.status(500).json({ success: false, message: "Failed to send message" });
     }
-}
+};
+
 
 export const fetchMessages = async (req, res) => {
     const senderId = req.user._id;

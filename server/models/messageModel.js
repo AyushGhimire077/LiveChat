@@ -13,8 +13,9 @@ const messageSchema = new mongoose.Schema(
       required: true,
     },
     message: { type: String, required: true },
+    image: { type: String },
   },
-  { timestamps: true } 
+  { timestamps: true }
 );
 
 // Create Indexes for faster queries
