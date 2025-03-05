@@ -1,8 +1,8 @@
-import React, { useEffect, useContext, useState } from "react";
+import React, { useEffect, useContext, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
-import { FaImage, FaTimes } from "react-icons/fa";
+import { FaImage, FaTimes, FaArrowDown } from "react-icons/fa";
 
 const ChatBox = () => {
   const { receiverId } = useParams();
@@ -11,8 +11,12 @@ const ChatBox = () => {
   const [message, setMessage] = useState("");
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isUserAtBottom, setIsUserAtBottom] = useState(true);
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const isFirstLoad = useRef(true);
 
-  // Handle file selection with preview
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -25,15 +29,14 @@ const ChatBox = () => {
     }
   };
 
-  // Clear image preview
   const removeImagePreview = () => {
     setImage(null);
     setImagePreview(null);
   };
 
   const handleSend = async () => {
-    if (!receiverId || (!message.trim())) {
-      toast.error("Message is required!");
+    if (!receiverId || (!message.trim() && !image)) {
+      toast.error("Please add a message or image!");
       return;
     }
 
@@ -41,6 +44,11 @@ const ChatBox = () => {
       await sendMessage(receiverId, message, image);
       setMessage("");
       removeImagePreview();
+
+      // Only auto-scroll if user is already near the bottom
+      if (isUserAtBottom) {
+        scrollToBottom(true);
+      }
     } catch (error) {
       console.error(error);
       toast.error(
@@ -50,21 +58,53 @@ const ChatBox = () => {
     }
   };
 
+  const scrollToBottom = (smooth = false) => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: smooth ? "smooth" : "auto",
+    });
+    setIsUserAtBottom(true);
+    setShowScrollButton(false);
+  };
+
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } =
+      messagesContainerRef.current;
+
+    const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // 50px tolerance
+    setIsUserAtBottom(isNearBottom);
+    setShowScrollButton(!isNearBottom);
+  };
+
   useEffect(() => {
     if (receiverId) {
       fetchMessages(receiverId);
     }
   }, [receiverId, fetchMessages]);
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      if (isFirstLoad.current) {
+        scrollToBottom(false); // No animation on first load
+        isFirstLoad.current = false;
+      } else if (isUserAtBottom) {
+        scrollToBottom(true); // Smooth scroll if user is at bottom
+      }
+    }
+  }, [messages]);
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-gray-700 to-gray-800">
-      {/* Chat Header */}
       <div className="p-4 bg-gray-800 border-b border-gray-600">
         <h3 className="text-xl font-semibold text-gray-100">Chat</h3>
       </div>
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Chat Messages Section */}
+      <div
+        className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+      >
         {isLoading ? (
           <div className="flex justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -85,13 +125,15 @@ const ChatBox = () => {
                 }`}
               >
                 {msg.image && (
-                  <img
-                    src={msg.image}
-                    alt="Message attachment"
-                    className="mt-2 max-w-xs rounded-lg border border-gray-500"
-                  />
+                  <div className="bg-gray-700 p-2 rounded-lg shadow-md">
+                    <img
+                      src={msg.image}
+                      alt="Message attachment"
+                      className="max-w-xs h-auto rounded-md"
+                    />
+                  </div>
                 )}
-                <p className="text-sm">{msg.message}</p>
+                {msg.message && <p className="text-sm mt-2">{msg.message}</p>}
                 <p className="text-xs mt-1 opacity-70">
                   {new Date(msg.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -106,24 +148,32 @@ const ChatBox = () => {
             No messages yet. Start a conversation!
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+      {/* Scroll to Bottom Button */}
+      {showScrollButton && (
+        <button
+          onClick={() => scrollToBottom(true)}
+          className="fixed bottom-20 right-5 bg-blue-600 p-3 rounded-full shadow-lg text-white hover:bg-blue-700 transition"
+        >
+          <FaArrowDown className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* Message Input Section */}
       <div className="p-4 bg-gray-800 border-t border-gray-600">
-        {/* Image Preview */}
         {imagePreview && (
           <div className="relative mb-4 max-w-xs">
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="rounded-lg border border-gray-600"
-            />
-            <button
-              onClick={removeImagePreview}
-              className="absolute -top-2 -right-2 bg-gray-700 rounded-full p-1 hover:bg-gray-600 transition-colors"
-            >
-              <FaTimes className="w-4 h-4 text-white" />
-            </button>
+            <div className="bg-gray-700 p-2 rounded-lg shadow-md">
+              <img src={imagePreview} alt="Preview" className="rounded-md" />
+              <button
+                onClick={removeImagePreview}
+                className="absolute -top-2 -right-2 bg-gray-700 rounded-full p-1 hover:bg-gray-600 transition-colors"
+              >
+                <FaTimes className="w-4 h-4 text-white" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -140,7 +190,7 @@ const ChatBox = () => {
 
           <input
             type="text"
-            placeholder="Type your message..."
+            placeholder="Type your message or send image..."
             onChange={(e) => setMessage(e.target.value)}
             value={message}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
