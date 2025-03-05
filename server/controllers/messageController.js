@@ -54,7 +54,6 @@ export const sendMessage = async (req, res) => {
     }
 };
 
-
 export const fetchMessages = async (req, res) => {
     const senderId = req.user._id;
     const receiverId = req.params.id;
@@ -77,3 +76,35 @@ export const fetchMessages = async (req, res) => {
     }
     
 }
+
+export const deleteConversation = async (req, res) => {
+  const receiverId = req.params.id;
+
+  if (!receiverId) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Receiver ID is required" });
+  }
+
+  try {
+    await Message.deleteMany({
+      $or: [
+        { sender: req.user._id, receiver: receiverId },
+        { sender: receiverId, receiver: req.user._id },
+      ],
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Conversation deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+  }
+};
