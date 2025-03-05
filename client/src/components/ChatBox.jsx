@@ -1,13 +1,11 @@
 import React, { useEffect, useContext, useState } from "react";
-import { useParams } from "react-router-dom"; // Import useParams from react-router-dom
+import { useParams } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
 
 const ChatBox = () => {
-  const { receiverId } = useParams(); // Get receiverId from URL using useParams
-  const { fetchMessages, messages, isLoading, sendMessage } =
-    useContext(AppContext);
-
+  const { receiverId } = useParams();
+  const { fetchMessages, messages, isLoading, sendMessage } = useContext(AppContext);
   const [message, setMessage] = useState("");
 
   const handleSend = async () => {
@@ -21,19 +19,16 @@ const ChatBox = () => {
       setMessage(""); // Clear input field after sending
     } catch (error) {
       console.error(error);
-      toast.error(
-        error.response?.data?.message ||
-          "Something went wrong while sending the message."
-      );
+      toast.error(error.response?.data?.message || "Something went wrong while sending the message.");
     }
   };
 
-  // Fetch messages when component mounts or receiverId changes
+  // Fetch messages only if receiverId changes
   useEffect(() => {
     if (receiverId) {
       fetchMessages(receiverId);
     }
-  }, [receiverId, fetchMessages]);
+  }, [ fetchMessages]);
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-gray-700 to-gray-800">
@@ -50,15 +45,11 @@ const ChatBox = () => {
           messages.map((msg) => (
             <div
               key={msg._id}
-              className={`flex ${
-                msg.sender === receiverId ? "justify-start" : "justify-end"
-              }`}
+              className={`flex ${msg.sender === receiverId ? "justify-start" : "justify-end"}`}
             >
               <div
                 className={`max-w-md p-3 rounded-lg ${
-                  msg.sender === receiverId
-                    ? "bg-gray-600 text-gray-100"
-                    : "bg-blue-600 text-white"
+                  msg.sender === receiverId ? "bg-gray-600 text-gray-100" : "bg-blue-600 text-white"
                 }`}
               >
                 <p className="text-sm">{msg.message}</p>
