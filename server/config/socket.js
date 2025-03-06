@@ -4,13 +4,15 @@ class SocketService {
   constructor() {
     this.io = null; 
     this.activeUsers = {}; 
+    this.typeingUsers = {};
   }
 
   initialize(server) {
     this.io = new Server(server, {
       cors: {
-        origin: "http://localhost:4000",
+        origin: "http://localhost:5173",
         methods: ["GET", "POST"],
+        credentials: true,
       },
     });
 
@@ -21,6 +23,18 @@ class SocketService {
       socket.on("set-userId", (userId) => {
         this.activeUsers[userId] = socket.id;
         console.log(`User ${userId} is online`);
+      });
+
+      socket.on("typing", (data) => {
+        const { senderId, receiverId } = data;
+        this.typeingUsers[receiverId] = senderId;
+         this.io.to(this.activeUsers[receiverId]).emit("userTyping", { senderId, receiverId });
+      });
+
+      socket.on("stopTyping", (data) => {
+        const { senderId, receiverId } = data;
+        delete this.typeingUsers[receiverId];
+        this.io.to(this.activeUsers[receiverId]).emit("userStoppedTyping", { senderId, receiverId });
       });
 
       // Remove user when they disconnect
